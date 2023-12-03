@@ -19,16 +19,31 @@ static async Task RunProducer(IServiceProvider serviceProvider, string topic)
     }
 }
 
-static void RunConsumer(IServiceProvider serviceProvider, string topic)
+static async Task RunConsumer(IServiceProvider serviceProvider, string topic)
 {
     var cancellationTokenSource = new CancellationTokenSource();
+    Console.CancelKeyPress += (sender, eventArgs) =>
+    {
+        eventArgs.Cancel = true; // Prevent the process from terminating.
+        cancellationTokenSource.Cancel();
+    };
+    
     var consumerService = serviceProvider.GetService<IKafkaConsumerService>();
     consumerService.StartConsuming(topic, cancellationTokenSource.Token);
-
-    Console.WriteLine("Press any key to stop consuming...");
-    Console.ReadKey();
-    cancellationTokenSource.Cancel();
-    consumerService.StopConsuming();
+    
+    Console.WriteLine("Press ctrl+c key to stop consuming...");
+    
+    try
+    {
+        // Block the main thread until cancellation is requested
+        await Task.Delay(Timeout.Infinite, cancellationTokenSource.Token);
+    }
+    catch (TaskCanceledException)
+    {
+        // Handle any cleanup or finalization here if needed
+        Console.WriteLine("Consumer stopping...");
+        consumerService.StopConsuming();
+    }
 }
 
 var serviceProvider = new ServiceCollection()
@@ -48,7 +63,7 @@ switch (choice)
         await RunProducer(serviceProvider, topic);
         break;
     case "2":
-        RunConsumer(serviceProvider, topic);
+        await RunConsumer(serviceProvider, topic);
         break;
     default:
         Console.WriteLine("Invalid choice.");
