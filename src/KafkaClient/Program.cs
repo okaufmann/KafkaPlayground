@@ -1,6 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 
+using Confluent.Kafka;
 using Consumer.Interfaces;
 using Consumer.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -13,7 +14,7 @@ static async Task RunProducer(IServiceProvider serviceProvider, string topic)
     Console.WriteLine("Enter your messages (type 'exit' to quit):");
     while (true)
     {
-        string text = Console.ReadLine();
+        var text = Console.ReadLine();
         if (text.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
         await producerService.ProduceAsync(topic, text);
     }
@@ -27,12 +28,12 @@ static async Task RunConsumer(IServiceProvider serviceProvider, string topic)
         eventArgs.Cancel = true; // Prevent the process from terminating.
         cancellationTokenSource.Cancel();
     };
-    
+
     var consumerService = serviceProvider.GetService<IKafkaConsumerService>();
     consumerService.StartConsuming(topic, cancellationTokenSource.Token);
-    
+
     Console.WriteLine("Press ctrl+c key to stop consuming...");
-    
+
     try
     {
         // Block the main thread until cancellation is requested
@@ -46,17 +47,31 @@ static async Task RunConsumer(IServiceProvider serviceProvider, string topic)
     }
 }
 
-var serviceProvider = new ServiceCollection()
-    .AddSingleton<IKafkaProducerService, KafkaProducerService>(_ =>
-        new KafkaProducerService("localhost:9092"))
-    .AddSingleton<IKafkaConsumerService, KafkaConsumerService>(_ =>
-        new KafkaConsumerService("localhost:9092", "my-consumer-group"))
+var serviceCollection = new ServiceCollection();
+
+var serviceProvider = serviceCollection.AddSingleton<IProducer<Null, string>>(provider =>
+    {
+        var config = new ProducerConfig { BootstrapServers = "localhost:9092" };
+        return new ProducerBuilder<Null, string>(config).Build();
+    })
+    .AddSingleton<IKafkaProducerService, KafkaProducerService>()
+    .AddSingleton<IConsumer<Ignore, string>>(consumer =>
+    {
+        var config = new ConsumerConfig
+        {
+            BootstrapServers = "localhost:9092",
+            GroupId = "my-consumer-group",
+            AutoOffsetReset = AutoOffsetReset.Earliest
+        };
+        return new ConsumerBuilder<Ignore, string>(config).Build();
+    })
+    .AddSingleton<IKafkaConsumerService, KafkaConsumerService>()
     .BuildServiceProvider();
 
 Console.WriteLine("Choose mode: 1 for Producer, 2 for Consumer");
 var choice = Console.ReadLine();
 
-string topic = "test-topic"; // Replace with your topic
+var topic = "test-topic"; // Replace with your topic
 switch (choice)
 {
     case "1":

@@ -3,21 +3,13 @@ using Consumer.Interfaces;
 
 namespace Consumer.Services;
 
-public class KafkaConsumerService(string bootstrapServers, string groupId) : IKafkaConsumerService
+public class KafkaConsumerService(IConsumer<Ignore, string> consumer) : IKafkaConsumerService
 {
-    private readonly ConsumerConfig _config = new()
-    {
-        GroupId = groupId,
-        BootstrapServers = bootstrapServers,
-        AutoOffsetReset = AutoOffsetReset.Earliest
-    };
-    private IConsumer<Ignore, string> _consumer;
     private bool _consuming;
 
     public void StartConsuming(string topic, CancellationToken cancellationToken)
     {
-        _consumer = new ConsumerBuilder<Ignore, string>(_config).Build();
-        _consumer.Subscribe(topic);
+        consumer.Subscribe(topic);
         _consuming = true;
 
         Task.Run(() =>
@@ -26,13 +18,13 @@ public class KafkaConsumerService(string bootstrapServers, string groupId) : IKa
             {
                 while (_consuming)
                 {
-                    var cr = _consumer.Consume(cancellationToken);
+                    var cr = consumer.Consume(cancellationToken);
                     Console.WriteLine($"Received message '{cr.Message.Value}' at: '{cr.TopicPartitionOffset}'.");
                 }
             }
             catch (OperationCanceledException)
             {
-                _consumer.Close();
+                consumer.Close();
             }
         }, cancellationToken);
     }
@@ -40,6 +32,6 @@ public class KafkaConsumerService(string bootstrapServers, string groupId) : IKa
     public void StopConsuming()
     {
         _consuming = false;
-        _consumer?.Close();
+        consumer?.Close();
     }
 }
