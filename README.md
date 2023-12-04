@@ -10,9 +10,8 @@ Kafka Playground is a .NET-based interactive application for experimenting with 
 ## Project Structure
 
 - `KafkaClient`: The main application for user interaction in the Kafka Playground.
-- `KafkaProducerLib`: Library handling Kafka message production.
-- `KafkaConsumerLib`: Library handling Kafka message consumption.
-- `Common` (Optional): Shared resources and utilities.
+- `Producer`: Library handling Kafka message production.
+- `Consumer`: Library handling Kafka message consumption.
 
 ## Setup
 
