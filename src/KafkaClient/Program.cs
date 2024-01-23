@@ -15,8 +15,11 @@ static async Task RunProducer(IServiceProvider serviceProvider, string topic)
     while (true)
     {
         var text = Console.ReadLine();
+        if (string.IsNullOrEmpty(text)) continue;
+
+
         if (text.Equals("exit", StringComparison.OrdinalIgnoreCase)) break;
-        await producerService.ProduceAsync(topic, text);
+        await producerService.ProduceAsync(topic, "message", text);
     }
 }
 
@@ -49,21 +52,21 @@ static async Task RunConsumer(IServiceProvider serviceProvider, string topic)
 
 var serviceCollection = new ServiceCollection();
 
-var serviceProvider = serviceCollection.AddSingleton<IProducer<Null, string>>(provider =>
+var serviceProvider = serviceCollection.AddSingleton<IProducer<string, string>>(provider =>
     {
-        var config = new ProducerConfig { BootstrapServers = "localhost:9092" };
-        return new ProducerBuilder<Null, string>(config).Build();
+        var config = new ProducerConfig { BootstrapServers = "localhost:19092" };
+        return new ProducerBuilder<string, string>(config).Build();
     })
     .AddSingleton<IKafkaProducerService, KafkaProducerService>()
-    .AddSingleton<IConsumer<Ignore, string>>(consumer =>
+    .AddSingleton<IConsumer<string, string>>(consumer =>
     {
         var config = new ConsumerConfig
         {
-            BootstrapServers = "localhost:9092",
+            BootstrapServers = "localhost:19092",
             GroupId = "my-consumer-group",
             AutoOffsetReset = AutoOffsetReset.Earliest
         };
-        return new ConsumerBuilder<Ignore, string>(config).Build();
+        return new ConsumerBuilder<string, string>(config).Build();
     })
     .AddSingleton<IKafkaConsumerService, KafkaConsumerService>()
     .BuildServiceProvider();

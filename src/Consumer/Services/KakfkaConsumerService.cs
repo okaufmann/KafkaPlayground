@@ -3,7 +3,7 @@ using Consumer.Interfaces;
 
 namespace Consumer.Services;
 
-public class KafkaConsumerService(IConsumer<Ignore, string> consumer) : IKafkaConsumerService
+public class KafkaConsumerService(IConsumer<string, string> consumer) : IKafkaConsumerService
 {
     private bool _consuming;
 
@@ -19,7 +19,8 @@ public class KafkaConsumerService(IConsumer<Ignore, string> consumer) : IKafkaCo
                 while (_consuming)
                 {
                     var cr = consumer.Consume(cancellationToken);
-                    Console.WriteLine($"Received message '{cr.Message.Value}' at: '{cr.TopicPartitionOffset}'.");
+                    Console.WriteLine(
+                        $"Received key '{cr.Message.Key}' message '{cr.Message.Value}' at: '{cr.TopicPartitionOffset}'.");
                 }
             }
             catch (OperationCanceledException)
